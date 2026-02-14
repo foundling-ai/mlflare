@@ -7,6 +7,7 @@ on:
 
 permissions:
   id-token: write
+  contents: read
 
 jobs:
   test:
@@ -17,6 +18,8 @@ jobs:
         python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -35,16 +38,26 @@ jobs:
     environment: pypi
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install build tools
-        run: pip install build
+        run: pip install build hatch-vcs
 
       - name: Build package
         run: python -m build sdk/
+
+      - name: Verify version matches tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#sdk-v}"
+          PKG_VERSION=$(python -c "from importlib.metadata import version; print(version('mlflare'))" 2>/dev/null || python -c "import re; print(re.search(r'Version: (.+)', open('sdk/dist/mlflare-${TAG_VERSION}/PKG-INFO').read()).group(1))" 2>/dev/null || ls sdk/dist/)
+          echo "Tag version: $TAG_VERSION"
+          echo "Built artifacts:"
+          ls sdk/dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

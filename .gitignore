@@ -23,6 +23,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+sdk/mlflare/_version.py
 *.egg
 .eggs/
 *.whl
