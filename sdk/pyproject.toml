@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "mlflare"
 dynamic = ["version"]
 description = "MLflare Python SDK — zero-dependency ML experiment tracking"
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 license = "MIT"
 dependencies = []
 
