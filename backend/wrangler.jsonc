@@ -1,0 +1,51 @@
+{
+  "name": "mlflare",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-15",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static assets: serve PWA from frontend build output
+  "assets": {
+    "directory": "../frontend/dist",
+    "run_worker_first": true
+  },
+
+  // D1 database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mlflare-db",
+      "database_id": "local"
+    }
+  ],
+
+  // R2 bucket
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "mlflare-storage"
+    }
+  ],
+
+  // Durable Objects
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "INSTANCE_ORCHESTRATOR",
+        "class_name": "InstanceOrchestrator"
+      },
+      {
+        "name": "EXPERIMENT_RUN",
+        "class_name": "ExperimentRun"
+      }
+    ]
+  },
+
+  // DO migrations
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["InstanceOrchestrator", "ExperimentRun"]
+    }
+  ]
+}

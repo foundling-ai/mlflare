@@ -1,0 +1,16 @@
+[Unit]
+Description=MLflare Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mlflare
+ExecStart=/usr/local/bin/mlflare-agent
+Restart=always
+RestartSec=10
+Environment=MLFLARE_WORKER_URL=https://mlflare.example.workers.dev
+Environment=MLFLARE_API_TOKEN=changeme
+
+[Install]
+WantedBy=multi-user.target

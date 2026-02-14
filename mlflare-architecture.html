@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLflare — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface-2: #18181b;
+    --surface-3: #1e1e22;
+    --border: #2a2a30;
+    --border-bright: #3a3a42;
+    --text: #e4e4e7;
+    --text-dim: #71717a;
+    --text-muted: #52525b;
+    --accent: #f97316;
+    --accent-glow: rgba(249, 115, 22, 0.15);
+    --accent-2: #06b6d4;
+    --accent-2-glow: rgba(6, 182, 212, 0.12);
+    --accent-3: #a78bfa;
+    --accent-3-glow: rgba(167, 139, 250, 0.12);
+    --accent-4: #34d399;
+    --accent-4-glow: rgba(52, 211, 153, 0.12);
+    --go: #00ADD8;
+    --ts: #3178C6;
+    --py: #FFD43B;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .noise {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb-1 {
+    width: 600px; height: 600px;
+    background: var(--accent-glow);
+    top: -200px; right: -100px;
+    animation: float1 20s ease-in-out infinite;
+  }
+
+  .glow-orb-2 {
+    width: 500px; height: 500px;
+    background: var(--accent-2-glow);
+    bottom: -100px; left: -100px;
+    animation: float2 25s ease-in-out infinite;
+  }
+
+  @keyframes float1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-80px, 60px); }
+  }
+
+  @keyframes float2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(60px, -80px); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent) 0%, #fb923c 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 40px var(--accent-glow);
+  }
+
+  .logo-text {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--text-dim) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 17px;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: 0.3px;
+  }
+
+  .subtitle span {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .badge-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .badge .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+  }
+
+  .badge-go .dot { background: var(--go); }
+  .badge-ts .dot { background: var(--ts); }
+  .badge-py .dot { background: var(--py); }
+
+  /* Main diagram */
+  .diagram {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: auto auto auto;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Nodes */
+  .node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .node:hover {
+    border-color: var(--border-bright);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+
+  .node-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .node-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .node-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .node-subtitle {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .node-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .node-list {
+    list-style: none;
+    margin-top: 10px;
+  }
+
+  .node-list li {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .node-list li::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    margin-left: auto;
+  }
+
+  .tag-go { background: rgba(0,173,216,0.12); color: var(--go); }
+  .tag-ts { background: rgba(49,120,198,0.12); color: var(--ts); }
+  .tag-py { background: rgba(255,212,59,0.12); color: var(--py); }
+
+  /* Specific node colors */
+  .node-gpu { border-color: rgba(249,115,22,0.25); }
+  .node-gpu:hover { border-color: rgba(249,115,22,0.5); box-shadow: 0 8px 40px var(--accent-glow); }
+  .node-gpu .node-icon { background: var(--accent-glow); color: var(--accent); }
+
+  .node-edge { border-color: rgba(6,182,212,0.25); }
+  .node-edge:hover { border-color: rgba(6,182,212,0.5); box-shadow: 0 8px 40px var(--accent-2-glow); }
+  .node-edge .node-icon { background: var(--accent-2-glow); color: var(--accent-2); }
+
+  .node-client { border-color: rgba(167,139,250,0.2); }
+  .node-client:hover { border-color: rgba(167,139,250,0.4); box-shadow: 0 8px 40px var(--accent-3-glow); }
+  .node-client .node-icon { background: var(--accent-3-glow); color: var(--accent-3); }
+
+  .node-storage { border-color: rgba(52,211,153,0.2); }
+  .node-storage:hover { border-color: rgba(52,211,153,0.4); box-shadow: 0 8px 40px var(--accent-4-glow); }
+  .node-storage .node-icon { background: var(--accent-4-glow); color: var(--accent-4); }
+
+  .node-ext { border-color: rgba(113,113,122,0.3); }
+  .node-ext .node-icon { background: rgba(113,113,122,0.15); color: var(--text-dim); }
+
+  /* Layout positioning */
+  .gpu-zone {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .edge-zone {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .client-zone {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .zone-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .zone-label-gpu {
+    color: var(--accent);
+    background: var(--accent-glow);
+    border: 1px solid rgba(249,115,22,0.2);
+  }
+
+  .zone-label-edge {
+    color: var(--accent-2);
+    background: var(--accent-2-glow);
+    border: 1px solid rgba(6,182,212,0.2);
+  }
+
+  .zone-label-client {
+    color: var(--accent-3);
+    background: var(--accent-3-glow);
+    border: 1px solid rgba(167,139,250,0.2);
+  }
+
+  /* Connection lines via SVG */
+  .connections-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Edge sub-grid */
+  .edge-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .edge-full {
+    grid-column: 1 / -1;
+  }
+
+  /* Flow section */
+  .flow-section {
+    margin-top: 80px;
+  }
+
+  .flow-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  .flow-title span {
+    color: var(--accent);
+  }
+
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    position: relative;
+  }
+
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 16px;
+    text-align: center;
+    position: relative;
+  }
+
+  .flow-step:first-child {
+    border-radius: 12px 0 0 12px;
+  }
+
+  .flow-step:last-child {
+    border-radius: 0 12px 12px 0;
+  }
+
+  .flow-step-num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--surface-3);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  .flow-step-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+  }
+
+  .flow-step-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .flow-step .flow-arrow {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 14px;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .flow-step:last-child .flow-arrow { display: none; }
+
+  /* Protocol labels */
+  .proto-section {
+    margin-top: 80px;
+  }
+
+  .proto-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .proto-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  .proto-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .proto-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .proto-card-badge {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: var(--surface-3);
+    color: var(--text-dim);
+  }
+
+  .proto-endpoints {
+    list-style: none;
+  }
+
+  .proto-endpoints li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .proto-endpoints li:last-child { border-bottom: none; }
+
+  .method {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .method-post { background: rgba(52,211,153,0.15); color: var(--accent-4); }
+  .method-get { background: rgba(6,182,212,0.15); color: var(--accent-2); }
+  .method-sse { background: rgba(167,139,250,0.15); color: var(--accent-3); }
+
+  .endpoint-path { color: var(--text-dim); }
+  .endpoint-desc { color: var(--text-muted); margin-left: auto; font-size: 10px; }
+
+  /* Footer */
+  .footer {
+    margin-top: 80px;
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .footer-text a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .diagram {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+    }
+    .gpu-zone, .edge-zone, .client-zone {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .flow-steps {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .flow-step:nth-child(3) { border-radius: 0 12px 0 0; }
+    .flow-step:nth-child(4) { border-radius: 0 0 0 12px; }
+    .flow-step:first-child { border-radius: 12px 0 0 0; }
+    .flow-step:last-child { border-radius: 0 0 12px 0; }
+  }
+
+  @media (max-width: 700px) {
+    .container { padding: 30px 16px; }
+    .edge-grid { grid-template-columns: 1fr; }
+    .proto-grid { grid-template-columns: 1fr; }
+    .flow-steps { grid-template-columns: 1fr; }
+    .flow-step { border-radius: 0 !important; }
+    .flow-step:first-child { border-radius: 12px 12px 0 0 !important; }
+    .flow-step:last-child { border-radius: 0 0 12px 12px !important; }
+    .flow-arrow { display: none !important; }
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate {
+    animation: fadeUp 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+  .delay-6 { animation-delay: 0.6s; }
+
+  /* Separator */
+  .separator {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 60px 0 40px;
+  }
+
+  .separator::before, .separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .separator-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--text-muted);
+  }
+
+  /* Data flow arrows between zones */
+  .data-flow-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+  }
+
+  .data-flow-label .arrow {
+    color: var(--accent);
+    font-size: 14px;
+  }
+
+  /* Stacked component detail */
+  .component-table {
+    margin-top: 80px;
+  }
+
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .comp-cell {
+    background: var(--surface);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .comp-cell-header {
+    background: var(--surface-2);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    padding: 14px 20px;
+  }
+
+  .comp-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .comp-detail {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header animate">
+    <div class="logo">
+      <div class="logo-icon">🔥</div>
+      <div class="logo-text">MLflare</div>
+    </div>
+    <p class="subtitle">Full ML Experiment <span>Command and Control</span> Platform<span></span></p>
+    <div class="badge-row">
+      <span class="badge badge-go"><span class="dot"></span>Go — Agent & CLI</span>
+      <span class="badge badge-ts"><span class="dot"></span>TypeScript — Backend & PWA</span>
+      <span class="badge badge-py"><span class="dot"></span>Python — SDK</span>
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="diagram">
+
+    <!-- GPU ZONE -->
+    <div class="gpu-zone animate delay-1">
+      <div class="zone-label zone-label-gpu">⬡ GPU Instance</div>
+
+      <div class="node node-gpu">
+        <div class="node-header">
+          <div class="node-icon">⚡</div>
+          <div>
+            <div class="node-title">Hyperstack A6000</div>
+            <div class="node-subtitle">Ephemeral GPU Compute</div>
+          </div>
+        </div>
+        <div class="node-body">
+          Hibernates when idle. Wakes on experiment submission. Billed only during active training.
+        </div>
+        <ul class="node-list">
+          <li>48GB VRAM</li>
+          <li>Hibernate / Restore API</li>
+          <li>Persists env across sleep</li>
+          <li>Retains IP (optional)</li>
+        </ul>
+      </div>
+
+      <div class="node node-gpu">
+        <div class="node-header">
+          <div class="node-icon">🤖</div>
+          <div>
+            <div class="node-title">mlflare-agent</div>
+            <div class="node-subtitle">GPU Daemon</div>
+          </div>
+          <span class="tag tag-go">Go</span>
+        </div>
+        <div class="node-body">
+          Single static binary. Zero Python dependencies. Manages experiment lifecycle on the instance.
+        </div>
+        <ul class="node-list">
+          <li>Checks in on wake</li>
+          <li>Pulls bundles from R2</li>
+          <li>Manages Python subprocess</li>
+          <li>Streams metrics & heartbeats</li>
+          <li>Reports completion / failure</li>
+          <li>Handles dep caching</li>
+        </ul>
+      </div>
+
+      <div class="node node-ext">
+        <div class="node-header">
+          <div class="node-icon">🧪</div>
+          <div>
+            <div class="node-title">Your ML Code</div>
+            <div class="node-subtitle">Python Subprocess</div>
+          </div>
+          <span class="tag tag-py">Python</span>
+        </div>
+        <div class="node-body">
+          Your training script, pushed as a code bundle. Runs in its own Python environment. Decoupled from the agent entirely.
+        </div>
+        <ul class="node-list">
+          <li>PyTorch / JAX / TF</li>
+          <li>mlflare SDK (optional)</li>
+          <li>Structured stdout logging</li>
+          <li>Any repo, any project</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- EDGE ZONE (Cloudflare) -->
+    <div class="edge-zone animate delay-2">
+      <div class="zone-label zone-label-edge">☁ Cloudflare Edge</div>
+
+      <div class="node node-edge edge-full">
+        <div class="node-header">
+          <div class="node-icon">🧠</div>
+          <div>
+            <div class="node-title">MLflare Worker</div>
+            <div class="node-subtitle">API & Orchestration Layer</div>
+          </div>
+          <span class="tag tag-ts">TypeScript</span>
+        </div>
+        <div class="node-body">
+          The nerve center. Routes all API calls, authenticates requests via Bearer token (agent) or TOTP/JWT (PWA), and delegates state management to the Durable Object.
+        </div>
+        <ul class="node-list">
+          <li>Hono router — /agent/*, /api/*, /auth/*</li>
+          <li>TOTP validation + JWT issuance</li>
+          <li>Bearer token auth for agent</li>
+          <li>Hyperstack API integration</li>
+          <li>SSE streaming for live metrics</li>
+        </ul>
+      </div>
+
+      <div class="edge-grid">
+        <div class="node node-edge">
+          <div class="node-header">
+            <div class="node-icon">🔄</div>
+            <div>
+              <div class="node-title">Durable Object</div>
+              <div class="node-subtitle">Experiment State Machine</div>
+            </div>
+          </div>
+          <div class="node-body">
+            Single point of truth for instance state and experiment queue. Manages lifecycle transitions and idle timeouts via Alarms.
+          </div>
+          <ul class="node-list">
+            <li>idle → waking → running → cooldown → hibernating</li>
+            <li>Experiment queue (FIFO)</li>
+            <li>Heartbeat monitoring</li>
+            <li>Dead-man's-switch alarm</li>
+            <li>Cost accumulator</li>
+          </ul>
+        </div>
+
+        <div class="node node-storage">
+          <div class="node-header">
+            <div class="node-icon">📦</div>
+            <div>
+              <div class="node-title">R2 Object Storage</div>
+              <div class="node-subtitle">Artifacts & Bundles</div>
+            </div>
+          </div>
+          <div class="node-body">
+            S3-compatible, zero egress fees. Stores everything that isn't structured query data.
+          </div>
+          <ul class="node-list">
+            <li>bundles/{id}.tar.gz</li>
+            <li>artifacts/{id}/model.pt</li>
+            <li>configs/{id}.json</li>
+            <li>metrics/{id}/*.jsonl</li>
+          </ul>
+        </div>
+
+        <div class="node node-storage">
+          <div class="node-header">
+            <div class="node-icon">🗄️</div>
+            <div>
+              <div class="node-title">D1 Database</div>
+              <div class="node-subtitle">Experiment Catalog</div>
+            </div>
+          </div>
+          <div class="node-body">
+            SQLite at the edge. Stores structured experiment metadata for querying and comparison.
+          </div>
+          <ul class="node-list">
+            <li>experiments</li>
+            <li>runs</li>
+            <li>params & metrics index</li>
+            <li>git metadata & bundle refs</li>
+          </ul>
+        </div>
+
+        <div class="node node-edge">
+          <div class="node-header">
+            <div class="node-icon">📄</div>
+            <div>
+              <div class="node-title">Cloudflare Pages</div>
+              <div class="node-subtitle">PWA Host</div>
+            </div>
+          </div>
+          <div class="node-body">
+            Globally distributed static hosting for the MLflare dashboard PWA. Free tier.
+          </div>
+          <ul class="node-list">
+            <li>Auto-deployed from embedded assets</li>
+            <li>Edge-cached worldwide</li>
+            <li>Custom domain support</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT ZONE -->
+    <div class="client-zone animate delay-3">
+      <div class="zone-label zone-label-client">◈ Client Interfaces</div>
+
+      <div class="node node-client">
+        <div class="node-header">
+          <div class="node-icon">📱</div>
+          <div>
+            <div class="node-title">MLflare PWA</div>
+            <div class="node-subtitle">Mobile-First Dashboard</div>
+          </div>
+          <span class="tag tag-ts">React</span>
+        </div>
+        <div class="node-body">
+          The command center. Purpose-built for checking experiments from your phone.
+        </div>
+        <ul class="node-list">
+          <li>TOTP login (6-digit code)</li>
+          <li>Live run monitoring</li>
+          <li>Run comparison & charts</li>
+          <li>Experiment submission</li>
+          <li>Instance control (wake/sleep)</li>
+          <li>Cost tracking</li>
+          <li>Push notifications</li>
+          <li>Offline-cached past runs</li>
+        </ul>
+      </div>
+
+      <div class="node node-client">
+        <div class="node-header">
+          <div class="node-icon">▸</div>
+          <div>
+            <div class="node-title">mlflare CLI</div>
+            <div class="node-subtitle">Local Command Interface</div>
+          </div>
+          <span class="tag tag-go">Go</span>
+        </div>
+        <div class="node-body">
+          Same Go module as the agent. Handles setup, experiment submission, and live log tailing.
+        </div>
+        <ul class="node-list">
+          <li>mlflare init — full provisioning</li>
+          <li>mlflare run — push-to-run</li>
+          <li>mlflare logs — SSE tail</li>
+          <li>mlflare status / queue</li>
+          <li>mlflare cost</li>
+          <li>Embeds Worker + PWA assets</li>
+          <li>Cloudflare OAuth (no wrangler)</li>
+        </ul>
+      </div>
+
+      <div class="node node-client">
+        <div class="node-header">
+          <div class="node-icon">🐍</div>
+          <div>
+            <div class="node-title">mlflare SDK</div>
+            <div class="node-subtitle">Python Logging Client</div>
+          </div>
+          <span class="tag tag-py">Python</span>
+        </div>
+        <div class="node-body">
+          Tiny optional import for rich metric logging from any Python environment. Works from Colab, SLURM, local — anywhere.
+        </div>
+        <ul class="node-list">
+          <li>mlflare.init() / .log() / .finish()</li>
+          <li>~200 lines, minimal deps</li>
+          <li>wandb-compatible API</li>
+          <li>Works without agent</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Experiment Flow -->
+  <div class="separator">
+    <span class="separator-label">Experiment Lifecycle</span>
+  </div>
+
+  <div class="flow-section animate delay-4">
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--accent-3);">01</div>
+        <div class="flow-step-title">Submit</div>
+        <div class="flow-step-desc">CLI bundles working dir, uploads to R2, POSTs config to Worker</div>
+        <span class="flow-arrow">→</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--accent-2);">02</div>
+        <div class="flow-step-title">Wake</div>
+        <div class="flow-step-desc">DO queues experiment, calls Hyperstack restore API, instance wakes</div>
+        <span class="flow-arrow">→</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--accent);">03</div>
+        <div class="flow-step-title">Execute</div>
+        <div class="flow-step-desc">Agent pulls bundle, checks deps, spawns training subprocess</div>
+        <span class="flow-arrow">→</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--accent-4);">04</div>
+        <div class="flow-step-title">Stream</div>
+        <div class="flow-step-desc">Metrics flow to Worker in batches. PWA shows live charts. Heartbeats keep DO alive</div>
+        <span class="flow-arrow">→</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--accent-3);">05</div>
+        <div class="flow-step-title">Complete</div>
+        <div class="flow-step-desc">Artifacts pushed to R2. Agent reports done. Next queued run starts or cooldown begins</div>
+        <span class="flow-arrow">→</span>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="color: var(--text-muted);">06</div>
+        <div class="flow-step-title">Hibernate</div>
+        <div class="flow-step-desc">Queue empty → cooldown timer → DO calls Hyperstack hibernate. GPU billing stops</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Contracts -->
+  <div class="separator">
+    <span class="separator-label">API Contracts</span>
+  </div>
+
+  <div class="proto-section animate delay-5">
+    <div class="proto-grid">
+      <div class="proto-card">
+        <div class="proto-card-header">
+          <span class="proto-card-title">Agent → Worker</span>
+          <span class="proto-card-badge">Bearer Token</span>
+        </div>
+        <ul class="proto-endpoints">
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/agent/checkin</span><span class="endpoint-desc">I'm awake</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/agent/heartbeat</span><span class="endpoint-desc">Still alive</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/agent/metrics</span><span class="endpoint-desc">Batch metrics</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/agent/completed</span><span class="endpoint-desc">Run finished</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/agent/failed</span><span class="endpoint-desc">Run crashed</span></li>
+          <li><span class="method method-get">GET</span><span class="endpoint-path">/agent/assignment</span><span class="endpoint-desc">Next config</span></li>
+        </ul>
+      </div>
+
+      <div class="proto-card">
+        <div class="proto-card-header">
+          <span class="proto-card-title">PWA → Worker</span>
+          <span class="proto-card-badge">TOTP / JWT</span>
+        </div>
+        <ul class="proto-endpoints">
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/auth/totp</span><span class="endpoint-desc">Login</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/api/experiments</span><span class="endpoint-desc">Submit run</span></li>
+          <li><span class="method method-get">GET</span><span class="endpoint-path">/api/experiments</span><span class="endpoint-desc">List runs</span></li>
+          <li><span class="method method-get">GET</span><span class="endpoint-path">/api/runs/:id</span><span class="endpoint-desc">Run detail</span></li>
+          <li><span class="method method-sse">SSE</span><span class="endpoint-path">/api/runs/:id/stream</span><span class="endpoint-desc">Live metrics</span></li>
+          <li><span class="method method-get">GET</span><span class="endpoint-path">/api/status</span><span class="endpoint-desc">Instance state</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/api/instance/wake</span><span class="endpoint-desc">Force wake</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/api/instance/hibernate</span><span class="endpoint-desc">Force sleep</span></li>
+        </ul>
+      </div>
+
+      <div class="proto-card">
+        <div class="proto-card-header">
+          <span class="proto-card-title">SDK → Worker</span>
+          <span class="proto-card-badge">API Token</span>
+        </div>
+        <ul class="proto-endpoints">
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/sdk/init</span><span class="endpoint-desc">Start run</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/sdk/log</span><span class="endpoint-desc">Log metrics</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/sdk/finish</span><span class="endpoint-desc">End run</span></li>
+          <li><span class="method method-post">POST</span><span class="endpoint-path">/sdk/artifact</span><span class="endpoint-desc">Upload file</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component Matrix -->
+  <div class="separator">
+    <span class="separator-label">Distribution Matrix</span>
+  </div>
+
+  <div class="component-table animate delay-6">
+    <div class="comp-grid">
+      <div class="comp-cell-header">Component</div>
+      <div class="comp-cell-header">Language</div>
+      <div class="comp-cell-header">Runs On</div>
+      <div class="comp-cell-header">Install</div>
+      <div class="comp-cell-header">Dependencies</div>
+
+      <div class="comp-cell"><span class="comp-name" style="color:var(--go);">mlflare</span><br><span class="comp-detail">CLI</span></div>
+      <div class="comp-cell"><span class="comp-detail">Go</span></div>
+      <div class="comp-cell"><span class="comp-detail">Your laptop</span></div>
+      <div class="comp-cell"><span class="comp-detail">brew / curl</span></div>
+      <div class="comp-cell"><span class="comp-detail" style="color:var(--accent-4);">None — static binary</span></div>
+
+      <div class="comp-cell"><span class="comp-name" style="color:var(--go);">mlflare-agent</span><br><span class="comp-detail">GPU Daemon</span></div>
+      <div class="comp-cell"><span class="comp-detail">Go</span></div>
+      <div class="comp-cell"><span class="comp-detail">GPU instance</span></div>
+      <div class="comp-cell"><span class="comp-detail">curl + systemd</span></div>
+      <div class="comp-cell"><span class="comp-detail" style="color:var(--accent-4);">None — static binary</span></div>
+
+      <div class="comp-cell"><span class="comp-name" style="color:var(--py);">mlflare</span><br><span class="comp-detail">Python SDK</span></div>
+      <div class="comp-cell"><span class="comp-detail">Python</span></div>
+      <div class="comp-cell"><span class="comp-detail">Anywhere</span></div>
+      <div class="comp-cell"><span class="comp-detail">pip install mlflare</span></div>
+      <div class="comp-cell"><span class="comp-detail" style="color:var(--accent-4);">requests only</span></div>
+
+      <div class="comp-cell"><span class="comp-name" style="color:var(--ts);">Worker</span><br><span class="comp-detail">Backend</span></div>
+      <div class="comp-cell"><span class="comp-detail">TypeScript</span></div>
+      <div class="comp-cell"><span class="comp-detail">Cloudflare Edge</span></div>
+      <div class="comp-cell"><span class="comp-detail">mlflare init</span></div>
+      <div class="comp-cell"><span class="comp-detail" style="color:var(--accent-4);">Embedded in CLI</span></div>
+
+      <div class="comp-cell"><span class="comp-name" style="color:var(--ts);">PWA</span><br><span class="comp-detail">Dashboard</span></div>
+      <div class="comp-cell"><span class="comp-detail">React + Vite</span></div>
+      <div class="comp-cell"><span class="comp-detail">Cloudflare Pages</span></div>
+      <div class="comp-cell"><span class="comp-detail">mlflare init</span></div>
+      <div class="comp-cell"><span class="comp-detail" style="color:var(--accent-4);">Embedded in CLI</span></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p class="footer-text">
+      Built by <a href="#">Foundling AI</a> · <a href="#">foundling-ai/mlflare</a> · Architecture v0.1
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
