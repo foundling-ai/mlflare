@@ -18,7 +18,7 @@ source = "vcs"
 raw-options = { root = "..", tag_regex = "^sdk-v(?P<version>.*)$" }
 
 [tool.hatch.build.hooks.vcs]
-version-file = "mlflare/_version.py"
+version-file = "sdk/mlflare/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mlflare"]
