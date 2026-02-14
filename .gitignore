@@ -9,10 +9,10 @@ dist/
 .wrangler/
 .dev.vars
 
-# Go binaries
-mlflare
-mlflare-agent
-mlflare-agent-linux
+# Go binaries (root dir only, not sdk/mlflare/ package)
+/mlflare
+/mlflare-agent
+/mlflare-agent-linux
 *.exe
 
 # Go build cache
