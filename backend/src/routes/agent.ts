@@ -22,6 +22,10 @@ agent.post('/checkin', async (c) => {
     const runStub = c.env.EXPERIMENT_RUN.get(runId) as unknown as ExperimentRun;
     await runStub.markRunning();
 
+    // Construct bundle URL from request origin so agent downloads through this Worker
+    const origin = new URL(c.req.url).origin;
+    assignment.bundle_url = `${origin}/agent/bundle/${assignment.bundle_key}`;
+
     // Update D1 as well
     c.executionCtx.waitUntil(
       c.env.DB.prepare('UPDATE runs SET status = ?, started_at = datetime(?) WHERE id = ?')

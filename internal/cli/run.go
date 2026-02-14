@@ -76,7 +76,7 @@ func runExperiment(cmd *cobra.Command, args []string) error {
 	}
 	defer os.Remove(bundlePath)
 
-	bundleKey := fmt.Sprintf("bundles/%s/%s.tar.gz", runProject, filepath.Base(bundlePath))
+	bundleKey := fmt.Sprintf("bundles/%s/%s", runProject, filepath.Base(bundlePath))
 
 	// Upload bundle through Worker (works for both local dev and production)
 	fmt.Printf("Uploading bundle (%s)...\n", bundleKey)

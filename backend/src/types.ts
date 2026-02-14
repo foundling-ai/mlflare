@@ -33,7 +33,8 @@ export interface AgentAssignment {
   run_id: string;
   experiment_id: string;
   entrypoint: string;
-  bundle_url: string;
+  bundle_key: string;
+  bundle_url?: string;
   deps_hash?: string;
   config?: Record<string, unknown>;
 }

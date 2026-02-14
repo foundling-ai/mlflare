@@ -13,6 +13,7 @@ export { ExperimentRun } from './do/experiment-run';
 export type Env = {
   DB: D1Database;
   R2: R2Bucket;
+  ASSETS: Fetcher;
   INSTANCE_ORCHESTRATOR: DurableObjectNamespace;
   EXPERIMENT_RUN: DurableObjectNamespace;
   API_TOKEN: string;

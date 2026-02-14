@@ -162,16 +162,11 @@ export class InstanceOrchestrator extends DurableObject<Env> {
     this.setState('running', entry.run_id);
     this.setAlarm('heartbeat_timeout', 5 * 60 * 1000); // 5 min timeout
 
-    // Generate presigned URL for bundle
-    const bundleUrl = this.isDev
-      ? `http://localhost:8787/agent/bundle/${entry.bundle_key}`
-      : `https://r2.example.com/${entry.bundle_key}`;
-
     return {
       run_id: entry.run_id,
       experiment_id: entry.experiment_id,
       entrypoint: entry.entrypoint,
-      bundle_url: bundleUrl,
+      bundle_key: entry.bundle_key,
       deps_hash: entry.deps_hash ?? undefined,
       config: entry.config ? JSON.parse(entry.config) : undefined,
     };

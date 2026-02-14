@@ -1,21 +1,22 @@
-let token: string | null = null;
+const TOKEN_KEY = 'mlflare_token';
 
 export function setToken(t: string) {
-  token = t;
+  sessionStorage.setItem(TOKEN_KEY, t);
 }
 
 export function getToken(): string | null {
-  return token;
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function clearToken() {
-  token = null;
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
