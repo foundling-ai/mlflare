@@ -17,6 +17,7 @@ dist/
 
 # Go build cache
 /vendor/
+/dist/
 
 # Python
 __pycache__/

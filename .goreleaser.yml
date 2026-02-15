@@ -1,0 +1,60 @@
+version: 2
+
+builds:
+  - id: mlflare
+    main: ./cmd/cli
+    binary: mlflare
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/foundling-ai/mlflare/internal/version.Version={{.Version}}
+      - -X github.com/foundling-ai/mlflare/internal/version.Commit={{.ShortCommit}}
+
+  - id: mlflare-agent
+    main: ./cmd/agent
+    binary: mlflare-agent
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/foundling-ai/mlflare/internal/version.Version={{.Version}}
+      - -X github.com/foundling-ai/mlflare/internal/version.Commit={{.ShortCommit}}
+
+archives:
+  - id: mlflare
+    builds:
+      - mlflare
+    name_template: "mlflare_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: mlflare-agent
+    builds:
+      - mlflare-agent
+    name_template: "mlflare-agent_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+release:
+  github:
+    owner: foundling-ai
+    name: mlflare

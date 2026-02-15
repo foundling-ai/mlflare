@@ -7,12 +7,10 @@ import (
 
 	"github.com/foundling-ai/mlflare/internal/api"
 	"github.com/foundling-ai/mlflare/internal/config"
+	"github.com/foundling-ai/mlflare/internal/version"
 )
 
-const (
-	agentVersion    = "0.1.0"
-	checkinInterval = 10 * time.Second
-)
+const checkinInterval = 10 * time.Second
 
 type Agent struct {
 	cfg    *config.AgentConfig
@@ -40,7 +38,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 
 		resp, err := a.client.Checkin(ctx, api.CheckinRequest{
-			AgentVersion: agentVersion,
+			AgentVersion: version.Version,
 			Hostname:     a.cfg.Hostname,
 		})
 		if err != nil {

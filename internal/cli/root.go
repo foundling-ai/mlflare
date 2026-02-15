@@ -7,13 +7,16 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/foundling-ai/mlflare/internal/version"
 )
 
 var cfgFile string
 
 var rootCmd = &cobra.Command{
-	Use:   "mlflare",
-	Short: "MLflare — ML experiment execution platform",
+	Use:     "mlflare",
+	Short:   "MLflare — ML experiment execution platform",
+	Version: version.Version,
 }
 
 func Execute() {
