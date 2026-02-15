@@ -15,10 +15,15 @@ dev = ["pytest>=7.0"]
 
 [tool.hatch.version]
 source = "vcs"
-raw-options = { root = "..", tag_regex = "^sdk-v(?P<version>.*)$" }
+raw-options.root = ".."
+raw-options.tag_regex = '^sdk-v(?P<version>.*)$'
+raw-options.git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "sdk-v*"]
 
 [tool.hatch.build.hooks.vcs]
 version-file = "mlflare/_version.py"
+
+[tool.hatch.build]
+ignore-vcs = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["mlflare"]
