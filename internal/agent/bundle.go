@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/foundling-ai/mlflare/internal/api"
 )
@@ -114,14 +115,35 @@ func InstallDeps(ctx context.Context, workDir, depsHash, venvPython string, logg
 		return nil
 	}
 
-	// Skip if deps hash matches
-	if depsHash != "" && depsHash == lastDepsHash {
-		logger.Info("deps hash unchanged, skipping install")
+	// Check if all deps are pinned (every non-comment line has == or ===)
+	allPinned := true
+	reqData, _ := os.ReadFile(reqFile)
+	for _, line := range strings.Split(string(reqData), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "-") {
+			continue
+		}
+		if !strings.Contains(line, "==") {
+			allPinned = false
+			break
+		}
+	}
+
+	// Skip install only if all deps are pinned AND hash matches
+	if allPinned && depsHash != "" && depsHash == lastDepsHash {
+		logger.Info("deps hash unchanged (all pinned), skipping install")
 		return nil
 	}
 
-	logger.Info("installing dependencies", "deps_hash", depsHash)
-	cmd := exec.CommandContext(ctx, venvPython, "-m", "pip", "install", "-r", reqFile, "--quiet")
+	args := []string{"-m", "pip", "install", "-r", reqFile, "--quiet"}
+	if !allPinned {
+		args = append(args, "--upgrade")
+		logger.Info("installing dependencies (upgrading unpinned)", "deps_hash", depsHash)
+	} else {
+		logger.Info("installing dependencies", "deps_hash", depsHash)
+	}
+
+	cmd := exec.CommandContext(ctx, venvPython, args...)
 	cmd.Dir = workDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
